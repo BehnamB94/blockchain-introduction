@@ -4,7 +4,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 import requests
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 
 class Transaction(BaseModel):
@@ -19,6 +19,13 @@ class Block(BaseModel):
     proof: int
     previous_hash: str
     transactions: list[Transaction] = list()
+
+    class Config:
+        json_encoders = {datetime: lambda v: v.isoformat()}
+
+    @validator("timestamp", pre=True)
+    def time_validate(cls, v):
+        return datetime.fromisoformat(v) if v is str else v
 
     def hash(self) -> str:
         encoded_block = self.model_dump_json().encode()
@@ -102,9 +109,9 @@ class BlockChain:
         for node in network:
             response = requests.get(f"http://{node}/get_chain")
             if response.status_code == 200:
-                chain_dict = response.json()["chain"]
+                chain_dict = response.json()["data"]["chain"]
                 length = len(chain_dict)
-                chain = [Block.from_dict(d) for d in chain_dict]
+                chain = [Block.model_validate(d) for d in chain_dict]
                 if length > max_length and self.is_chain_valid(chain):
                     max_length = length
                     longest_chain = chain
