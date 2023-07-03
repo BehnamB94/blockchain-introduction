@@ -34,9 +34,15 @@ class BlockChain:
 
     def __init__(self) -> None:
         self.chain: List[Block] = list()
-        self.create_block(proof=1, previous_hash="0")
+        self._create_block(proof=1, previous_hash="0")
 
-    def create_block(self, proof: int, previous_hash: str) -> Block:
+    def mine(self) -> Block:
+        last_block = self.get_last_block()
+        last_proof = last_block.proof
+        new_proof = self._proof_of_work(last_proof)
+        return self._create_block(new_proof, last_block.hash())
+
+    def _create_block(self, proof: int, previous_hash: str) -> Block:
         block = Block(
             index=len(self.chain) + 1,
             timestamp=datetime.now(),
@@ -49,8 +55,8 @@ class BlockChain:
     def get_last_block(self) -> Block:
         return self.chain[-1]
 
-    def proof_of_work(self, previous_proof: int):
-        new_proof = 100000
+    def _proof_of_work(self, previous_proof: int):
+        new_proof = 1
         check_proof = False
         while not check_proof:
             nonce_bytes = self.get_nonce_bytes(new_proof, previous_proof)

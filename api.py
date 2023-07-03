@@ -10,21 +10,11 @@ bc = BlockChain()
 
 @app.get("/mine")
 def mine():
-    last_block = bc.get_last_block()
-    last_proof = last_block.proof
     start_time = datetime.now()
-    new_proof = bc.proof_of_work(last_proof)
+    block = bc.mine()
     end_time = datetime.now()
-    block = bc.create_block(new_proof, last_block.hash())
     time = (end_time - start_time).total_seconds()
-    return {
-        "index": block.index,
-        "timestamp": block.timestamp,
-        "proof": block.proof,
-        "hash": block.hash(),
-        "previous_hash": block.previous_hash,
-        "mine_duration": time,
-    }
+    return {"block": block.get_dict(), "mine_duration": time}
 
 
 @app.get("/get_chain")
