@@ -1,0 +1,76 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "APP 0",
+      "type": "python",
+      "request": "launch",
+      "module": "flask",
+      "env": {
+        "FLASK_APP": "api.py",
+        "FLASK_DEBUG": "1",
+        "BLOCKCHAIN_RECEIVER": "Nazgol"
+      },
+      "args": [
+        "run",
+        "--port",
+        "5000",
+        "--no-debugger",
+        "--no-reload"
+      ],
+      "jinja": true,
+      "justMyCode": true
+    },
+    {
+      "name": "APP 1",
+      "type": "python",
+      "request": "launch",
+      "module": "flask",
+      "env": {
+        "FLASK_APP": "api.py",
+        "FLASK_DEBUG": "1",
+        "BLOCKCHAIN_RECEIVER": "Tayyebe"
+      },
+      "args": [
+        "run",
+        "--port",
+        "5001",
+        "--no-debugger",
+        "--no-reload"
+      ],
+      "jinja": true,
+      "justMyCode": true
+    },
+    {
+      "name": "APP 2",
+      "type": "python",
+      "request": "launch",
+      "module": "flask",
+      "env": {
+        "FLASK_APP": "api.py",
+        "FLASK_DEBUG": "1",
+        "BLOCKCHAIN_RECEIVER": "Behnam"
+      },
+      "args": [
+        "run",
+        "--port",
+        "5002",
+        "--no-debugger",
+        "--no-reload"
+      ],
+      "jinja": true,
+      "justMyCode": true
+    },
+    {
+      "name": "Main",
+      "type": "python",
+      "request": "launch",
+      "program": "main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}

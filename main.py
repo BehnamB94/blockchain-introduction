@@ -16,7 +16,7 @@ proof_list = list()
 time_list = list()
 for i in tqdm(range(blocks_to_mine), bar_format="{l_bar}{bar:40}{r_bar}{bar:-10b}"):
     start_time = datetime.now()
-    block = bc.mine()
+    block = bc.mine("A", "B")
     end_time = datetime.now()
     time = (end_time - start_time).total_seconds()
     proof_list.append(block.proof)
