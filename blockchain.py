@@ -4,67 +4,24 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 import requests
+from pydantic import BaseModel
 
 
-class Transaction:
-    def __init__(self, sender: str, receiver: str, amount: int) -> None:
-        self.sender = sender
-        self.receiver = receiver
-        self.amount = amount
-
-    def get_dict(self):
-        return {
-            "sender": self.sender,
-            "receiver": self.receiver,
-            "amount": self.amount,
-        }
-
-    @staticmethod
-    def from_dict(obj: dict) -> "Transaction":
-        return Transaction(
-            sender=obj["sender"], receiver=obj["receiver"], amount=obj["amount"]
-        )
+class Transaction(BaseModel):
+    sender: str
+    receiver: str
+    amount: int
 
 
-class Block:
-    def __init__(
-        self,
-        index: int,
-        timestamp: datetime,
-        proof: int,
-        previous_hash: str,
-        transactions: list[Transaction] = list(),
-    ) -> None:
-        self.index = index
-        self.timestamp = timestamp
-        self.proof = proof
-        self.previous_hash = previous_hash
-        self.transactions = transactions
-
-    def get_dict(self):
-        return {
-            "index": self.index,
-            "timestamp": str(self.timestamp),
-            "proof": self.proof,
-            "previous_hash": self.previous_hash,
-            "transactions": [t.get_dict() for t in self.transactions],
-        }
-
-    @staticmethod
-    def from_dict(obj: dict) -> "Block":
-        return Block(
-            index=obj["index"],
-            timestamp=obj["timestamp"],
-            proof=obj["proof"],
-            previous_hash=obj["previous_hash"],
-            transactions=[Transaction.from_dict(d) for d in obj["transactions"]],
-        )
-
-    def __repr__(self) -> str:
-        return json.dumps(self.get_dict(), sort_keys=True)
+class Block(BaseModel):
+    index: int
+    timestamp: datetime
+    proof: int
+    previous_hash: str
+    transactions: list[Transaction] = list()
 
     def hash(self) -> str:
-        encoded_block = self.__repr__().encode()
+        encoded_block = self.model_dump_json().encode()
         return hashlib.sha3_256(encoded_block).hexdigest()
 
 
@@ -81,7 +38,8 @@ class BlockChain:
         last_block = self.get_last_block()
         last_proof = last_block.proof
         new_proof = self._proof_of_work(last_proof)
-        self.add_transaction(sender, receiver, amount=1)
+        new_transaction = Transaction(sender=sender, receiver=receiver, amount=1)
+        self.add_transaction(new_transaction)
         return self._create_block(new_proof, last_block.hash())
 
     def _create_block(self, proof: int, previous_hash: str) -> Block:
@@ -127,16 +85,17 @@ class BlockChain:
             previous_block = block
         return True
 
-    def add_transaction(self, sender, receiver, amount) -> int:
-        self.transactions.append(Transaction(sender, receiver, amount))
+    def add_transaction(self, transaction: Transaction) -> int:
+        self.transactions.append(transaction)
         previous_block = self.get_last_block()
         return previous_block.index + 1
 
-    def add_node(self, address):
+    def add_node(self, address: str) -> set[str]:
         parsed_url = urlparse(address)
         self.nodes.add(parsed_url.netloc)
+        return self.nodes
 
-    def replace_chain(self):
+    def replace_chain(self) -> bool:
         network = self.nodes
         longest_chain = None
         max_length = len(self.chain)
@@ -158,7 +117,7 @@ class BlockChain:
         return str(self.chain)
 
     @staticmethod
-    def get_nonce_bytes(new_proof: int, previous_proof: int):
+    def get_nonce_bytes(new_proof: int, previous_proof: int) -> bytes:
         return str(new_proof**2 - previous_proof**2).encode()
         # return str(new_proof**3 - previous_proof**3).encode()
         # return str(new_proof + previous_proof).encode()
