@@ -19,7 +19,7 @@ def mine():
 
 @app.get("/get_chain")
 def get_chain():
-    return {"valid": [bl.get_dict() for bl in bc.chain]}
+    return {"chain": [bl.get_dict() for bl in bc.chain]}
 
 
 @app.get("/verify")
