@@ -1,5 +1,5 @@
-import hashlib
 from datetime import datetime
+from hashlib import sha3_256
 from urllib.parse import urlparse
 
 import requests
@@ -15,7 +15,7 @@ class Transaction(BaseModel):
 class Block(BaseModel):
     index: int
     timestamp: datetime
-    proof: int
+    nonce: int
     previous_hash: str
     transactions: list[Transaction] = list()
 
@@ -26,67 +26,72 @@ class Block(BaseModel):
     def time_validate(cls, v):
         return datetime.fromisoformat(v) if v is str else v
 
+    def model_dump(self, *args, **kwargs):
+        d = super().model_dump(*args, **kwargs)
+        d["hash"] = self.hash()
+        return d
+
     def hash(self) -> str:
-        encoded_block = self.model_dump_json().encode()
-        return hashlib.sha3_256(encoded_block).hexdigest()
+        return sha3_256(self.model_dump_json().encode()).hexdigest()
 
 
 class BlockChain:
-    number_of_leading_zeros = 4
+    leading_zero_hex = 4
 
     def __init__(self) -> None:
         self.chain: list[Block] = list()
         self.transactions: list[Transaction] = list()
         self.nodes: set[str] = set()
-        self._create_block(proof=1, previous_hash="0")
+        block = self._generate_test_block(nonce=1, prev_hash="0", transactions=[])
+        self._add_block(block)
 
     def mine(self, sender: str, receiver: str) -> Block:
-        last_block = self.get_last_block()
-        last_proof = last_block.proof
-        new_proof = self._proof_of_work(last_proof)
-        new_transaction = Transaction(sender=sender, receiver=receiver, amount=1)
-        self.add_transaction(new_transaction)
-        return self._create_block(new_proof, last_block.hash())
+        reward = Transaction(sender=sender, receiver=receiver, amount=1)
+        new_block = self._proof_of_work(reward)
+        self._add_block(new_block)
+        return new_block
 
-    def _create_block(self, proof: int, previous_hash: str) -> Block:
+    def _generate_test_block(
+        self, nonce: int, prev_hash: str, transactions: list[Transaction]
+    ) -> Block:
         block = Block(
             index=len(self.chain) + 1,
-            timestamp=datetime.now(),
-            proof=proof,
-            previous_hash=previous_hash,
-            transactions=self.transactions,
+            timestamp=datetime.now().replace(microsecond=0),
+            nonce=nonce,
+            previous_hash=prev_hash,
+            transactions=transactions,
         )
-        self.transactions = list()
-        self.chain.append(block)
         return block
+
+    def _add_block(self, block: Block) -> bool:
+        if self.is_chain_valid(self.chain + [block]):
+            self.transactions = list()
+            self.chain.append(block)
+            return True
+        return False
 
     def get_last_block(self) -> Block:
         return self.chain[-1]
 
-    def _proof_of_work(self, previous_proof: int):
-        new_proof = 1
-        check_proof = False
-        while not check_proof:
-            nonce_bytes = self.get_nonce_bytes(new_proof, previous_proof)
-            hash = hashlib.sha3_256(nonce_bytes).hexdigest()
-            if self.is_hash_valid(hash):
-                check_proof = True
+    def _proof_of_work(self, reward: Transaction) -> Block:
+        n = 0
+        previous_hash = self.get_last_block().hash()
+        transactions = self.transactions + [reward]
+        while True:
+            candidate_block = self._generate_test_block(n, previous_hash, transactions)
+            if self.is_hash_valid(candidate_block.hash()):
+                return candidate_block
             else:
-                new_proof += 1
-        return new_proof
+                n += 1
 
     def is_chain_valid(self, chain: list[Block] | None = None) -> bool:
         if chain is None:
             chain = self.chain
         previous_block = chain[0]
         for block in chain[1:]:
-            if block.previous_hash != previous_block.hash():
-                return False
-            previous_proof = previous_block.proof
-            proof = block.proof
-            nonce_bytes = self.get_nonce_bytes(proof, previous_proof)
-            hash = hashlib.sha3_256(nonce_bytes).hexdigest()
-            if not self.is_hash_valid(hash):
+            if block.previous_hash != previous_block.hash() or not self.is_hash_valid(
+                block.hash()
+            ):
                 return False
             previous_block = block
         return True
@@ -122,12 +127,6 @@ class BlockChain:
     def __repr__(self) -> str:
         return str(self.chain)
 
-    @staticmethod
-    def get_nonce_bytes(new_proof: int, previous_proof: int) -> bytes:
-        return str(new_proof**2 - previous_proof**2).encode()
-        # return str(new_proof**3 - previous_proof**3).encode()
-        # return str(new_proof + previous_proof).encode()
-
     @classmethod
     def is_hash_valid(cls, hash: str) -> bool:
-        return hash.startswith("0" * cls.number_of_leading_zeros)
+        return hash.startswith("0" * cls.leading_zero_hex)
