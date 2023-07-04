@@ -39,9 +39,9 @@ class BlockChain:
     leading_zero_hex = 4
 
     def __init__(self) -> None:
-        self.chain: list[Block] = list()
-        self.transactions: list[Transaction] = list()
-        self.nodes: set[str] = set()
+        self._chain: list[Block] = list()
+        self._transactions: list[Transaction] = list()
+        self._nodes: set[str] = set()
         block = self._generate_test_block(nonce=1, prev_hash="0", transactions=[])
         self._add_block(block)
 
@@ -51,42 +51,15 @@ class BlockChain:
         self._add_block(new_block)
         return new_block
 
-    def _generate_test_block(
-        self, nonce: int, prev_hash: str, transactions: list[Transaction]
-    ) -> Block:
-        block = Block(
-            index=len(self.chain) + 1,
-            timestamp=datetime.now().replace(microsecond=0),
-            nonce=nonce,
-            previous_hash=prev_hash,
-            transactions=transactions,
-        )
-        return block
-
-    def _add_block(self, block: Block) -> bool:
-        if self.is_chain_valid(self.chain + [block]):
-            self.transactions = list()
-            self.chain.append(block)
-            return True
-        return False
-
     def get_last_block(self) -> Block:
-        return self.chain[-1]
+        return self._chain[-1]
 
-    def _proof_of_work(self, reward: Transaction) -> Block:
-        n = 0
-        previous_hash = self.get_last_block().hash()
-        transactions = self.transactions + [reward]
-        while True:
-            candidate_block = self._generate_test_block(n, previous_hash, transactions)
-            if self.is_hash_valid(candidate_block.hash()):
-                return candidate_block
-            else:
-                n += 1
+    def get_chain_dict(self) -> list[dict]:
+        return [bl.model_dump() for bl in self._chain]
 
     def is_chain_valid(self, chain: list[Block] | None = None) -> bool:
         if chain is None:
-            chain = self.chain
+            chain = self._chain
         previous_block = chain[0]
         for block in chain[1:]:
             if block.previous_hash != previous_block.hash() or not self.is_hash_valid(
@@ -97,19 +70,22 @@ class BlockChain:
         return True
 
     def add_transaction(self, transaction: Transaction) -> int:
-        self.transactions.append(transaction)
+        self._transactions.append(transaction)
         previous_block = self.get_last_block()
         return previous_block.index + 1
 
     def add_node(self, address: str) -> set[str]:
         parsed_url = urlparse(address)
-        self.nodes.add(parsed_url.netloc)
-        return self.nodes
+        self._nodes.add(parsed_url.netloc)
+        return self._nodes
+
+    def get_node_list(self) -> list[str]:
+        return list(self._nodes)
 
     def replace_chain(self) -> bool:
-        network = self.nodes
+        network = self._nodes
         longest_chain = None
-        max_length = len(self.chain)
+        max_length = len(self._chain)
         for node in network:
             response = requests.get(f"http://{node}/get_chain")
             if response.status_code == 200:
@@ -120,12 +96,42 @@ class BlockChain:
                     max_length = length
                     longest_chain = chain
         if longest_chain:
-            self.chain = longest_chain
+            self._chain = longest_chain
+            return True
+        return False
+
+    def _proof_of_work(self, reward: Transaction) -> Block:
+        n = 0
+        previous_hash = self.get_last_block().hash()
+        transactions = self._transactions + [reward]
+        while True:
+            candidate_block = self._generate_test_block(n, previous_hash, transactions)
+            if self.is_hash_valid(candidate_block.hash()):
+                return candidate_block
+            else:
+                n += 1
+
+    def _generate_test_block(
+        self, nonce: int, prev_hash: str, transactions: list[Transaction]
+    ) -> Block:
+        block = Block(
+            index=len(self._chain) + 1,
+            timestamp=datetime.now().replace(microsecond=0),
+            nonce=nonce,
+            previous_hash=prev_hash,
+            transactions=transactions,
+        )
+        return block
+
+    def _add_block(self, block: Block) -> bool:
+        if self.is_chain_valid(self._chain + [block]):
+            self._transactions = list()
+            self._chain.append(block)
             return True
         return False
 
     def __repr__(self) -> str:
-        return str(self.chain)
+        return str(self._chain)
 
     @classmethod
     def is_hash_valid(cls, hash: str) -> bool:

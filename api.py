@@ -37,7 +37,7 @@ def mine():
 @app.get("/get_chain")
 @validate()
 def get_chain():
-    return AppResponse(data={"chain": [bl.model_dump() for bl in bc.chain]})
+    return AppResponse(data={"chain": bc.get_chain_dict()})
 
 
 @app.get("/verify")
@@ -58,7 +58,7 @@ def add_transaction(body: Transaction):
 def connect_node(body: AddNodeInput):
     for node in body.nodes:
         bc.add_node(node.unicode_string())
-    return AppResponse(data={"total_nodes": list(bc.nodes)})
+    return AppResponse(data={"total_nodes": bc.get_node_list()})
 
 
 @app.get("/replace_chain")
@@ -71,7 +71,7 @@ def replace_chain():
     return AppResponse(
         data={
             "chain_replaced": is_chain_replaced,
-            "chain": [bl.model_dump() for bl in bc.chain],
+            "chain": bc.get_chain_dict(),
         }
     )
 

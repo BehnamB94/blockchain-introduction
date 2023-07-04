@@ -32,7 +32,7 @@
       "env": {
         "FLASK_APP": "api.py",
         "FLASK_DEBUG": "1",
-        "BLOCKCHAIN_RECEIVER": "Tayyebe"
+        "BLOCKCHAIN_RECEIVER": "Tayebe"
       },
       "args": [
         "run",
